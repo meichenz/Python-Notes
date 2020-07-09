@@ -242,7 +242,28 @@ plt.show()
 
 
 
+# BIGRAM analysis
+from sklearn.feature_extraction.text import CountVectorizer
+vectorizer=CountVectorizer(ngram_range=(2, 2)) #bigram configuration
+text=vectorizer.fit_transform(df['text'])
 
+bigram_sum=df_text.sum(axis=0).sort_values(ascending=False)
+top_100_bigram_df=pd.DataFrame(bigram_sum[:100])
+top_100_bigarm_df=top_100_bigram_df.reset_index()
+top_100_bigram_df.columns=['word', 'count']
+top_100_bigram_df[:10]
+
+# Dictionary Word Cloud Creation
+freq_dict=top_100_bigram_df.set_index('word')['count'].to_dict()
+
+
+# BIGRAM Word Cloud 
+wc = WordCloud(background_color="while", colormap="Dark2", max_font_size=150, random_state=42)
+cloud=wc.generate_from_frequencies(freq_dict)
+
+plt.imshow(cloud)
+plt.axis("off")
+plt.show()
 
 
 
