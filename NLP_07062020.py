@@ -18,7 +18,7 @@ df.head()
 
 # NaN means data is missing 
 
-# outer [] means select, inner [] means list 
+# [IMPORTANT] outer [] means select, inner [] means list 
 df[['text', 'created_at']].head()
 
 print("how many records ? ", len(df))
@@ -98,13 +98,148 @@ df['text'] = df['text'].apply(standardize_text)
 df['text'] = df['text'].apply(tokenize_stem_token)
 df['text'] = df['text'].apply(remove_stopwords)
 
+# Persist dataframe to disk
+
+df.to_pickel("df_cleaned.pickle")
 
 
+# NLP Lesson 3 Feature Extraction
 
-	
+!pip install plotly
+!pip install wordcloud
+
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
+import plotly.express as px # popular, highlevel API, interactive graph
+import plotly.graph_objects as go
+import pandas as pd
 
 
-	
+# 1. Read in DF
+df=pd.read_pickle('df2_cleaned.pickle')
+
+# transform a list of words to a string of sentence 
+# this is for CountVectorizer to transform sentences into bag of words 
+
+df['text'] = df['text'].apply(lambda x: " ".join(x))
+df.head()
+len(df)
+
+# 2. Generate Bag of Words
+
+# <IMPORTANT> https://scikit-learn.org/stable/modules/generated/sklearn.feature_extraction.text.CountVectorizer.html
+from sklearn.feature_extraction.text import CountVectorizer
+
+# CountVectorizer can be used to configure NLP methods
+# eg use ngram_range to configure unigram, bigram or combination of both
+vectorizer = CountVectorizer() # this API has functions : fit, transform and predict
+text = vectorizer.fit_transform(df['text'])
+
+text.shape
+[output] (5341, 6248) # row, col
+
+# transform the result into a dataframe
+# Each row is one tweet, each column is one word
+df_text = pd.DataFrame(text.toarray(), columns=vectorizer.get_feature_names())
+df_text.head()
+
+
+# 3. Top Words Visualization
+# in the sum function, we can define how to sum either along row or col 
+# axis = 0 refers to the index axis - so we sum along this axis for each column
+word_sum=df_text.sum(axis=0).sort_values(ascending=False)
+word_sum[:10]
+[output]
+great 1324
+amp 911
+wa 792
+....]
+
+top_100_word_df=pd.DataFrame(word_sum[:100])
+top_100_word_df=top_100_word_df.reset_index() # otherwise it will has index value of the words above
+top_100_word_df.columns=['word', 'count'] # name the columns 
+
+# draw a bar plot
+fig = px.bar(top_100_word_df, x='word', y='count')
+fig.show()
+
+# draw a pie plot
+fig=px.pie(
+	top_100_word_df.head(30),
+	values='count',
+	names='word',
+	title="Top 30 Word Count of Trump's Tweets")
+fig.show()
+
+# 4. China-USA Trend Visualization
+
+# Add back column 'created_at' column
+df_text['created_at']=df['created_at']
+
+# we consider use of word 'china' or 'xi' related to China 
+# use of 'usa', 'america' or 'american' related to the US
+# (Chinese was transformed to China during lemmatization)
+
+# create boolean selector
+is_china=(df_text['china']>0 | df_text['xi']>0)
+print(sum(is_china))
+is_china
+
+is_usa=(df_text['usa']>0 | df_text['america']>0 | df_text['american']>0)
+print(sum(is_usa))
+
+# create dataframe that counts china related and usa related for each row
+df_text_2=df_text[is_china | is_usa]
+print(len(df_text_2))
+
+df_text_2['china_related'] = df_text_2['china'] + df_text_2['xi']
+df_text_2['usa_related'] = df_text_2['usa'] + df_text_2['america'] + df_text_2['american']
+
+df_text_2 = df_text_2[['created_at', 'china_related', 'usa_related']]
+df_text_2 = df_text_2.set_index('created_at') # so later we can use the value of index to group
+df_text_2.head()
+
+# group by month
+df_groupby = df_text_2.groupby(pd.Grouper(freq='M'))
+sum_by_month=df_groupby.sum()
+# change index to 'year-month', using list comprehension API
+sum_by_month.index=[str(x.year) + '-' + str(x.month) for x in sum_by_month.index]
+sum_by_month.head()
+
+# plotting line chart
+fig = go.Figure()
+
+fig.add_trace(go.Scatter(x=sum_by_month.index, y=sum_by_month.usa_related,
+			 mode='lines+markers',
+			 name='usa-related count'
+			))
+
+fig.add_trace(go.Scatter(x=sum_by_month.index, y=sum_by_month.china_related,
+			 mode='lines+markers',
+			 name='china-related count'
+			))
+
+
+# 5. Word Cloud
+wc = WordCloud(background_color='white', colormap='Dark2', max_font_size=150, random_state=42)
+
+# similarly, transform df to string separated by spaces
+whole_text = " ".join(text for text in df['text'])
+cloud = wc.generate(whole_text)
+
+# plot the cloud using matplotlib
+plt.imshow(cloud)
+plt.axis("off")
+plt.show()
+
+# remove words that are not of interest 
+whole_text_2 = whole_text.replace("amp", "")
+cloud2 = wc.generate(whole_text_2)
+
+plt.imshow(cloud2)
+plt.axis("off")
+plt.show()
+
 
 
 
