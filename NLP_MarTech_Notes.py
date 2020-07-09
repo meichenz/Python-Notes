@@ -265,6 +265,72 @@ plt.imshow(cloud)
 plt.axis("off")
 plt.show()
 
+############ Lesson 4 Sentiment Analysis ############
+! pip install textblob
+
+from textblob import TextBlob
+
+import matplotlib.pyplot as plt 
+import plotly.express as px
+impoer plotly.graph_objects as go 
+import pandas as pd
+
+pd.options.display.max_rows = 4000
+pd.set_option('display.max_colwidth', 4000)
+
+# How to use TextBlob
+df = pd.read_pickle('df2_cleaned.pickle')
+df['text']=df['text'].apply(lambda x: " ".join(x))
+
+df['polarity'] = df['text'].apply(lambda x:TextBblob(x).sentiment[0])
+df['subjectivity'] = df['text'].apply(lambda x: TextBlob(x).sentiment[1])
+
+df.head()
+
+
+# Sentiment Visualization
+
+# See the average scores of polarity and subjectivity 
+print("average polarity score: ", df['polarity'].mean())
+print("average subjectivity score: ", df['subjectivity'].mean())
+
+fig = px.histogram(df['polarity'], x='polarity', title='Histogram of Polarity of Trump\'s Tweets')
+fig.show()
+
+fig = px.histogram(df['subjectivity'], x='subjectivity', title='Histogram of Subjectivity of Trump\'s Tweets')
+fig.show()
+
+# Similarly get subset of China/USA related tweets
+from sklearn.feature_extraction.text import CountVectorizer
+vectorizer = CountVectorizer()
+bow = vectorizer.fit_transform(df['text'])
+
+df_bow = pd.DataFrame(bow.toarray(), columns=vectorizer.get_feature_names())
+df_bow.head()
+
+is_china = (df_bow['china'] > 0 | df_bow['xi'] > 0)
+is_usa = (df_bow['usa'] > 0 | df_bow['america'] > 0 | df_bow['american'] > 0)
+
+df.index = is_china.index
+df_small = df[is_china | is_usa]
+# create field 'related_to', set default value to usa, and then if related to China, set to china
+df_small['related_to'] = 'USA'
+df_small.loc[is_china, 'related_to'] = 'China'
+
+df_small.head()
+
+# visualization
+fig=px.histogram(df_small, x='polarity', color='related_to', 
+		marginal='rug', hover_data=['text', 'polarity'])
+fig.update_layout(barmode='overlay')
+fig.update_traces(opacity=0.75)
+fig.show()
+
+
+
+
+
+
 
 
 
