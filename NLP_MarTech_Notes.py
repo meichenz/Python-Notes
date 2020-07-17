@@ -330,16 +330,123 @@ fig.show()
 ########################################################
 ####### NLP Lesson 5 Latent Dirichlet Allocation #######
 ########################################################
+# Will cover  
+# How to extract topics of good quality - clear, segregated and meaningful
+# Use Gensim topic modeling tool to extract topics from Trumps tweets 
+# How to evaluate if the topics makes sense 
+
+# !pip install spacy
+# !pip install gensim
+# !pip install pyLDAvis 
+
+# Gensim 
+import gensim
+import gensim.corpora as corpora
+from gensim.utils import simple_preprocess
+
+# Plotting tools 
+import pyLDAvis
+import pyLDAvis.gensim 
+import matplotlib.pyplot as plt 
+%matplotlib inline
+
+import pandas as pd
+import pickle
+
+pd.options.display.max_rows = 4000
+pd.set_option('display.max_colwidth', 4000)
+
+# 1. Load text data 
+# import cleansed data, only focus on column 'text'
+df = pd.read_pickle('df2_cleaned.pickle')
+texts = list(df['text'])
+
+# load raw data as well
+with open('', 'rb') as handle:
+	texts_raw = pickle.load(handle)
+
+# compare 
+print(texts[:1])
+print(texts_raw[:1])
+
+# bag of words doesn't have order, so we apply bigram method to make 'Terms'
+bigram = gensim.models.Phrases(texts, min_count= 5, threshold = 100)
+bigram_mod = gensim.models.phrases.Phraser(bigram)
+bigram_mod[text[0]]
+# other conisderations : think about bigram, trigram or a mix, 
+# or using tag-of-speech to filter only noun/adj words (getting rid of verbs help improve result?)
+# for topic modeling
+
+
+# 2. Data preparation for topic modeling 
+# User gensim to create a corpus on all tweets, which is a mapping of (word_id, word_freq).
+id2word = corpora.Dictionary(texts)
+id2word[5]
+
+# Term document frequency 
+corpus = [id2word.doc2bow(text) for text in texts] # tuple
+print(corpus[2]) # for the 3rd tweet, show tuples consisting (word_id, word_freq)
+print(texts[2]) # original tweet message
+print("word id 43 is ", id2word[43]) # the 43 word is 'given'
+
+# if we have (43, 2), we can conclude that for the 3rd tweet, word 'given' appreared twice
+# This is a cleaner representation than sparse matrix by CountVectorizer in Lesson 3 
+# Because gensim doesn't present words having zero count, while CountVectorizer does, labeled as columns
+# ** corpus and id2word will be used as input to the LDA model
+
+# an example , print out a non-sparse term-frequency dict 
+[[(id2word[id], freq) for id, freq in cp] for cp in corpus[2:3]]
+# output is like [[('year', 1), ('amp', 1), ...]]
+
+# 3. Build a topic model 
+# Parameters 
+# num_topics : number of topics in the whole file that we assume there are
+# alpha, eta : control the sparsity of the topics
+# chunkize : like batch_size, the number of documents used in each training batch 
+# random_state : initial state
+# update_ever : how often the model parameters should be updated
+# passes : total number of training passes 
+
+lda_model = gensim.models_ldamodel.LdaModel(
+			corpus = corpus,
+			id2word = id2word,
+			num_topics = 5,
+			random_state = 100,
+			update_every = 1,
+			chunksize = 100,
+			passes = 10,
+			alpha = 'auto',
+			per_word_topics = True)
+
+
+# print the keyword in 5 topics 
+lda_model.print_topics()
+# how to interprete the result?
+# first examine if the words for the topic make sense. Then come up with a description eg 'Fake news'
+# check a few tweets assigned to this topic 
+# if the probability of words is too even, eg highest being 2%, 1% and the highest Prob are close to each other, 
+# and if the words don't make a story within each topic
+# then we would consider the words not representative, thus topic number should increase
+# if we already have a high number of topics, the percentages may be low, and results are more detailed
+# so it's a matter of hot granular we want the topics to be
+# see topic coherence score for quantitative approach to select the optimal num_topics 
+
+
+# show the probability of topics for tweet #14. The highest probability should win! 
+print(lda_model.get_document_topics(corpus)[13])
+# print out the tweet to verify
+print(texts_raw[13])
+
+# 4. Tweets Topic Visualization
+pyLDAvis = enable_notebook()
+vis = pyLDAvis.gensim.prepare(lda_model, corpus, id2word)
+vis 
+# Intepretation of viz 
+# each buccle on the left hand side represents a topic. The larger, the mode prevalent the topic is (more tweets)
+# a good topic model will have faily big, non-overlapping bubbles. Overlap means a tweet can be assigned to more than one topic.
 
 
 
-
-
-
-
-
- 
- 
  
 
 
