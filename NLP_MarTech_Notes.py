@@ -446,7 +446,202 @@ vis
 # a good topic model will have faily big, non-overlapping bubbles. Overlap means a tweet can be assigned to more than one topic.
 
 
+########################################################
+####### NLP Lesson 6 Latent Dirichlet Allocation #######
+########################################################
 
- 
+# Construct a next-word dictionary
+# Generate Trump-like tweets 
+
+from collections import defaultdict 
+
+import pandas as pd 
+import pickle
+import re
+import random
+
+pd.options.display.max_rows = 4000
+pd.set_option('display.max_colwidth', 4000)
+
+
+# 1. Load Text Data
+# load raw text data, keeping punctuations
+with open('texts_raw.pickle', 'rb') as handle:
+	texts_raw = pickle.load(handle)
+
+print(text_raw[0])
+
+# 2. Build Markov Chains
+# Create a disctionary where key is a word and value is a list of words/punctuations that come after the key in the text
+# First create the dictionary without START and END token for completeness of the sentence
+# In the improvement part, will add START and END tokens
+
+### EXAMPLE START ###
+example = texts_raw[0]
+example_list = re.findall(r"[\w']+|[.,!?;:] ?", example.lower())
+print(example_list)
+# we get list of all words and punctuations from the example tweet 
+
+zipped_list = list(zip(example_list[:-1], example_list[1:])) # First list remove last word, second list rmove first word
+zipped_list
+# we get paired list of words/punctuations from the example tweet
+### EXAMPLE END ###
+
+# Make the same dictionary for all tweets
+def light_clean(texts):
+	``` Input: A list of texts in string
+	    Output: A list of texts in lower case
+	```
+	return [re.findall(r"[\w]+|[.,!?;:] ?", t.lower()) for t in texts]
+	
+def markov_chain_dict(texts):
+	```Input: A list of texts(tweets)
+	   Output: A dictionary where key is a word 
+		and value is a list of words/punctuations 
+		that come after the key in all text
+	```
+	# initialize a default dictionary that holds all the words and next words
+	# collections.defaultdict provides quicker and safer write operation - see python online doc
+	mc_dict = defaultdict(list)
+	
+	# create a zipped list of all the word pairs and append next words to the value for each
+	for words in texts:
+		for current_word, next_word in zip(words[:-1], words[1:]):
+			mc_dict[current_word].append(next_word)
+	
+	# convert the default dict back into dictionary 
+	mc_dict = dict(mc_dict)
+	return mc_dict
+
+# Build Markov Chain
+mc_dict = markov_chain_dict(texts_clean)
+print(mc_dict)
+# there is the dictionary we created {key : value} for all the words
+
+###
+# Example of the 4th tweet : light clean the texts
+texts_clean = light_clean(texts_raw)
+print(texts_raw[3])
+print(texts_clean[3])
+###
+
+# 3. Generate Tweets
+def generate_tweet(mc_dict, length):
+	```Input: A dictionary in the format of markov chains and the length of sentence
+	   Output: A string/a sentence
+	```
+	# Get the first word
+	word1 = random.choice(list(mc_dict.keys()))
+	sentence = word1
+	
+	# Generate the following words
+	for i in range(length - 1):
+		# randomly choose a word from the word1's value list
+		word2 = random.choice(mc_dict[word1])
+		
+		# If current word is punctuation, no space added
+		# If current word is actually a word, adding space in between
+		if re.match():
+			sentence += word2
+		else:
+			sentence += ' ' + word2
+		
+		word1 = word2
+	return(sentence)
+
+generate_tweet(mc_dict, 15)
+# we can see that the beginning and ending are a bit off, while the middle looks like something Trump would say
+# sometimes we cannot find the next word for the current word, then there is an 'Key not found' exception/error
+
+# 4. Improve Text Generation
+# Have START/END token to denote the start and end of sentence
+# Early stop when the chosen word is END, or there is no next word
+
+def light_clean_2(texts)
+	```Input: A list of text in string
+	   Output: A list of text in lower case
+	```
+	# tokenize the text and add start/end to each sentence
+	return[["START"] + re.findall(r"[\w]+|[.,!?;:] ?", t.lower()) + ["END"] for t in texts]
+
+# Light clean the texts
+texts_clean_2 = light_clean_2(texts_raw)
+print(texts_clean_2[3])
+
+# Build Markov Chain (no change)
+mc_dict2 = markov_chain_dict(texts_clean_2)
+print(mc_dict_2)
+
+def generte_tweet_2(mc_dict, max_length):
+	```Input: A dictionary in th format of markov chain and max length of the sentence
+	   Output: A string/sentence
+	```
+	
+	# Get the first word, which is the next word of START
+	word1 = random.choice(mc_dict["START"])
+	sentence = word1
+	
+	# Generate the following words
+	i = 1
+	while(i < max_length):
+		word2 = random.choice(mc_dict[word1])
+		
+		# If current word is END , stop early
+		if (word2 == "END")
+			break
+		
+		# If current word id punctuation, no space added
+		# If current word is actually a word, add space in between
+		if re.march(r"[.,!?;:]", word2):
+			sentence += word2
+		else:
+			sentence += ' ' + word2
+			
+		word1 = word2
+	
+	# If there is no early stop before the desired length of sentence, and the last word is not END,
+	# we add '.' at the end of the sentence 
+	if (i ==max_length and mc_dict[word1] != "END"):
+		sentence += '.'
+	return(sentence)
+
+generate_tweet_2(mc_dict_2, 25)
+
+
+
+
+	
+	
+	
+
+
+
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+		
+
+
+
+
+
+
+
+
+
+
+
 
 
